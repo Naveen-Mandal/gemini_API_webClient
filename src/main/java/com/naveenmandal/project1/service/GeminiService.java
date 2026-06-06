@@ -22,7 +22,7 @@ public class GeminiService {
     private WebClient webClient;
 
     public Mono<GeminiResponse> callGeminiApi(GeminiRequest request) {
-        String endpoint = "/v1beta/models/gemini-pro:generateContent"; // Adjust path based on your config
+        String endpoint = "/v1beta/models/gemini-pro:generateContent";
 
         logger.info("Initiating outbound reactive stream request to Gemini API endpoint.");
 
@@ -31,7 +31,7 @@ public class GeminiService {
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(GeminiResponse.class)
-                // 1. Exponential Backoff Retry Strategy for handling rate limits (HTTP 429) or timeouts
+                // Exponential Backoff Retry Strategy for handling rate limits (HTTP 429) or timeouts
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
                         .filter(throwable -> isRetryableException(throwable))
                         .doBeforeRetry(retrySignal -> logger.warn(
@@ -40,7 +40,7 @@ public class GeminiService {
                                 retrySignal.failure().getMessage()
                         ))
                 )
-                // 2. Strict Exception Handling & Log Footprint Diagnosis
+                // Traceability and logging validation footprints
                 .doOnSuccess(response -> logger.info("Successfully fetched and parsed nested payload structure from Gemini API."))
                 .doOnError(error -> logger.error("Fatal failure downstream. Unable to resolve API call stream after retries."))
                 .onErrorResume(WebClientResponseException.class, ex -> {
@@ -60,7 +60,6 @@ public class GeminiService {
             // Retry on HTTP 429 Too Many Requests (Rate Limits) or Server Errors (5xx)
             return webEx.getStatusCode().value() == 429 || webEx.getStatusCode().is5xxServerError();
         }
-        // Retry on network layer timeouts / I/O disconnects
         return throwable instanceof java.io.IOException || throwable instanceof java.util.concurrent.TimeoutException;
     }
 }
